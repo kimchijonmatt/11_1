@@ -1,11 +1,2 @@
-streamlit
-folium
-streamlit-folium
-pandas
-google-generativeai
-pillow
-
-
-
-streamlit>=1.40.0,<2.0.0
-
+streamlit>=1.30.0
+protobuf
