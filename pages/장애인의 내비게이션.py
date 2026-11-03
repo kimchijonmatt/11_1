@@ -13,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 커스텀 CSS (삼중 따옴표 안닫힘 오류 완벽 방지)
+# 2. 커스텀 CSS
 css_code = """
 <style>
 .stApp {
@@ -145,104 +145,3 @@ with tab1:
         user_mode = st.radio(
             "이동 유형",
             ["♿ 휠체어 이용자 (경사로·엘리베이터)", "🦯 시각장애인 (음향신호·점자블록)", "👶 유모차·고령자 (계단 피하기)"],
-            key="user_mode_select"
-        )
-        
-        st.write("---")
-        avoid_stairs = st.checkbox("계단 완벽 제거", value=True, key="chk_stairs")
-        avoid_slopes = st.checkbox("급경사 구간 회피", value=True, key="chk_slopes")
-        
-        find_btn = st.button("🚀 무장애 경로 탐색", use_container_width=True, key="btn_find")
-
-    with col_result:
-        if find_btn:
-            st.markdown(f'<div class="custom-card"><div class="card-title">✨ [{start_p}] ➔ [{end_p}] 최적 안전 경로</div><p style="color: #6C757D; margin-bottom: 0;">선택 모드: <b>{user_mode}</b></p></div>', unsafe_allow_html=True)
-            
-            m1, m2, m3 = st.columns(3)
-            m1.metric("총 이동거리", "1.8 km")
-            m2.metric("예상 소요시간", "약 25분")
-            m3.metric("안전 지수", "98점 (계단 0개)")
-            
-            st.markdown("""
-            **📌 단계별 상세 이동 가이드**
-            1. **[출발]** 서울역 1번 출구 엘리베이터를 통해 지상 보도로 이동합니다.
-            2. **[평지]** 300m 직선 보도 이동 (보도폭 2.5m 이상, 턱 없음).
-            3. **[횡단보도]** 음향 신호기가 설치된 횡단보도를 통해 안전하게 건넙니다.
-            4. **[도착]** 광화문광장 지상 무장애 경사로로 최종 접근합니다.
-            """)
-            
-            m = folium.Map(location=[37.5660, 126.9750], zoom_start=14)
-            folium.Marker([37.5559, 126.9723], popup="출발지: 서울역", icon=folium.Icon(color="green", icon="play")).add_to(m)
-            folium.Marker([37.5759, 126.9768], popup="목적지: 광화문광장", icon=folium.Icon(color="red", icon="flag")).add_to(m)
-            
-            route_coords = [
-                [37.5559, 126.9723],
-                [37.5620, 126.9750],
-                [37.5665, 126.9780],
-                [37.5759, 126.9768]
-            ]
-            folium.PolyLine(route_coords, color="#005A9C", weight=7, opacity=0.85, tooltip="추천 경로").add_to(m)
-            st_folium(m, use_container_width=True, height=380, key="map_route")
-        else:
-            st.info("👈 출발지와 목적지를 설정한 후 [무장애 경로 탐색] 버튼을 눌러주세요.")
-            default_m = folium.Map(location=[37.5665, 126.9780], zoom_start=13)
-            st_folium(default_m, use_container_width=True, height=420, key="map_default")
-
-# TAB 2: 시설 정보 & 제보
-with tab2:
-    col_map_view, col_report_form = st.columns([2, 1], gap="medium")
-    
-    with col_report_form:
-        st.markdown('<div class="custom-card"><div class="card-title">⚠️ 실시간 위험/장애물 제보</div></div>', unsafe_allow_html=True)
-        
-        r_type = st.selectbox("위험 유형", ["🚫 엘리베이터 고장", "🚧 공사 구간", "⚠️ 보도블록 파손", "❌ 경사로 막힘", "💬 기타"], key="sel_type")
-        r_desc = st.text_area("상세 내용 입력", placeholder="예: 3번 출구 엘리베이터가 고장나 점검 중입니다.", key="txt_desc")
-        r_lat = st.number_input("위도 (Lat)", value=37.5670, format="%.4f", key="num_lat")
-        r_lon = st.number_input("경도 (Lon)", value=126.9790, format="%.4f", key="num_lon")
-        
-        if st.button("📢 위치 제보 등록", use_container_width=True, key="btn_report"):
-            if r_desc.strip():
-                st.session_state.reports.append({
-                    "lat": r_lat,
-                    "lon": r_lon,
-                    "type": r_type,
-                    "desc": r_desc
-                })
-                st.success("제보 내용이 지도의 실시간 등록되었습니다.")
-            else:
-                st.warning("상세 내용을 작성해 주세요.")
-                
-    with col_map_view:
-        st.markdown("##### 📍 편의시설 및 사용자 제보 지도")
-        m2 = folium.Map(location=[37.5665, 126.9780], zoom_start=14)
-        
-        for fac in FACILITIES:
-            folium.Marker(
-                [fac["lat"], fac["lon"]],
-                popup=f"<b>{fac['name']}</b><br>{fac['cat']}",
-                icon=folium.Icon(color="blue", icon="info-sign")
-            ).add_to(m2)
-            
-        for rep in st.session_state.reports:
-            folium.Marker(
-                [rep["lat"], rep["lon"]],
-                popup=f"<b>[제보] {rep['type']}</b><br>{rep['desc']}",
-                icon=folium.Icon(color="red", icon="exclamation-sign")
-            ).add_to(m2)
-            
-        st_folium(m2, use_container_width=True, height=480, key="map_facility")
-
-# TAB 3: AI 이동 도우미
-with tab3:
-    if not ai_enabled:
-        st.warning("🔒 Gemini API 키가 설정되지 않았습니다. Streamlit Secrets에 `GEMINI_API_KEY`를 추가하여 AI 기능을 활성화하세요.")
-    else:
-        c1, c2 = st.columns(2, gap="medium")
-        
-        with c1:
-            st.markdown('<div class="custom-card"><div class="card-title">💬 AI 보행 접근성 상담</div></div>', unsafe_allow_html=True)
-            
-            q = st.text_input("질문 입력", placeholder="예: 전동휠체어로 지하철 환승 시 가장 쉬운 방법은?", key="ai_q_input")
-            if st.button("AI 가이드 물어보기", use_container_width=True, key="btn_ai_q"):
-                if q:
-                    with st.spinner("Gemini AI가 이동 접근성 정보를
