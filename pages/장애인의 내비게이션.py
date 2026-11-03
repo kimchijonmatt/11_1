@@ -206,3 +206,114 @@ with tab1:
 # ---------------------------------------------------------
 # TAB 2: 편의시설 및 위험 제보 Map
 # ---------------------------------------------------------
+with tab2:
+    col_map_view, col_report_form = st.columns([2, 1], gap="medium")
+    
+    with col_report_form:
+        st.markdown("""
+            <div class="custom-card">
+                <div class="card-title">⚠️ 실시간 위험/장애물 제보</div>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        r_type = st.selectbox("위험 유형", ["🚫 엘리베이터 고장", "🚧 공사 구간", "⚠️ 보도블록 파손", "❌ 경사로 막힘", "💬 기타"])
+        r_desc = st.text_area("상세 내용 입력", placeholder="예: 3번 출구 엘리베이터가 고장나 점검 중입니다.")
+        r_lat = st.number_input("위도 (Lat)", value=37.5670, format="%.4f")
+        r_lon = st.number_input("경도 (Lon)", value=126.9790, format="%.4f")
+        
+        if st.button("📢 위치 제보 등록", use_container_width=True):
+            if r_desc.strip():
+                st.session_state.reports.append({
+                    "lat": r_lat,
+                    "lon": r_lon,
+                    "type": r_type,
+                    "desc": r_desc
+                })
+                st.success("제보 내용이 지도의 실시간 등록되었습니다.")
+            else:
+                st.warning("상세 내용을 작성해 주세요.")
+                
+    with col_map_view:
+        st.markdown("##### 📍 편의시설 및 사용자 제보 지도")
+        m2 = folium.Map(location=[37.5665, 126.9780], zoom_start=14)
+        
+        # 편의시설 마커 (Blue)
+        for fac in FACILITIES:
+            folium.Marker(
+                [fac["lat"], fac["lon"]],
+                popup=f"<b>{fac['name']}</b><br>{fac['cat']}",
+                icon=folium.Icon(color="blue", icon="info-sign")
+            ).add_to(m2)
+            
+        # 제보 마커 (Red)
+        for rep in st.session_state.reports:
+            folium.Marker(
+                [rep["lat"], rep["lon"]],
+                popup=f"<b>[제보] {rep['type']}</b><br>{rep['desc']}",
+                icon=folium.Icon(color="red", icon="exclamation-sign")
+            ).add_to(m2)
+            
+        st_folium(m2, use_container_width=True, height=480)
+
+# ---------------------------------------------------------
+# TAB 3: AI 보행 지원 (Gemini)
+# ---------------------------------------------------------
+with tab3:
+    if not ai_enabled:
+        st.warning("🔒 Gemini API 키가 설정되지 않았습니다. Streamlit Secrets에 `GEMINI_API_KEY`를 추가하여 AI 기능을 활성화하세요.")
+    else:
+        c1, c2 = st.columns(2, gap="medium")
+        
+        with c1:
+            st.markdown("""
+                <div class="custom-card">
+                    <div class="card-title">💬 AI 보행 접근성 상담</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            q = st.text_input("질문 입력", placeholder="예: 전동휠체어로 지하철 환승 시 가장 쉬운 방법은?")
+            if st.button("AI 가이드 물어보기", use_container_width=True):
+                if q:
+                    with st.spinner("Gemini AI가 이동 접근성 정보를 분석 중입니다..."):
+                        try:
+                            prompt = f"""
+                            당신은 장애인 보행 접근성 전문가입니다.
+                            다음 문의에 대해 휠체어 이용자, 시각장애인, 노약자가 이해하기 쉬운 형태로 핵심 이동 팁을 제시하세요.
+                            질문: {q}
+                            """
+                            res = model.generate_content(prompt)
+                            st.markdown("---")
+                            st.markdown("#### 🤖 AI 답변")
+                            st.info(res.text)
+                        except Exception as e:
+                            st.error(f"오류 발생: {e}")
+                else:
+                    st.warning("질문을 입력해 주세요.")
+                    
+        with c2:
+            st.markdown("""
+                <div class="custom-card">
+                    <div class="card-title">📷 길거리 장애물 사진 분석 (Vision)</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            img_file = st.file_uploader("보도/장애물 사진 업로드", type=["jpg", "png", "jpeg"])
+            if img_file:
+                img = Image.open(img_file)
+                st.image(img, caption="업로드한 이미지", use_container_width=True)
+                
+                if st.button("🔍 장애물 통행가능 여부 분석", use_container_width=True):
+                    with st.spinner("이미지를 분석 중입니다..."):
+                        try:
+                            prompt = """
+                            사진속 이동 경로를 분석하세요:
+                            1. 휠체어/유모차 진입 가능 여부 (가능/주의/불가)
+                            2. 통행을 방해하는 장애물 요소
+                            3. 추천하는 회피 또는 안전 수칙
+                            """
+                            res = model.generate_content([prompt, img])
+                            st.markdown("---")
+                            st.markdown("#### 📊 분석 결과")
+                            st.success(res.text)
+                        except Exception as e:
+                            st.error(f"분석 실패: {e}")
