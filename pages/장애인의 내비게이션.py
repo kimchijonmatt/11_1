@@ -13,13 +13,12 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. 고대비 & 접근성 커스텀 CSS
+# 2. 커스텀 CSS
 st.markdown("""
     <style>
     .stApp {
         background-color: #F8F9FA;
     }
-    
     .header-box {
         background: linear-gradient(135deg, #005A9C 0%, #003B66 100%);
         color: white;
@@ -39,7 +38,6 @@ st.markdown("""
         font-size: 1.05rem !important;
         margin: 0 !important;
     }
-    
     .custom-card {
         background-color: #FFFFFF;
         padding: 20px;
@@ -48,7 +46,6 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         margin-bottom: 20px;
     }
-    
     .card-title {
         font-size: 1.15rem;
         font-weight: 700;
@@ -58,7 +55,6 @@ st.markdown("""
         align-items: center;
         gap: 8px;
     }
-
     .stTabs [data-baseweb="tab-list"] {
         gap: 12px;
         background-color: transparent;
@@ -78,7 +74,6 @@ st.markdown("""
         color: #FFFFFF !important;
         border-color: #005A9C !important;
     }
-
     .stButton > button {
         background-color: #005A9C;
         color: white;
@@ -97,7 +92,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Gemini API 안심 설정 (오류 발생 차단 예외 처리)
+# 3. Gemini API 예외 처리
 GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", None)
 ai_enabled = False
 model = None
@@ -105,13 +100,13 @@ model = None
 if GEMINI_API_KEY:
     try:
         genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel('gemini-2.5-flash-lite')
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
         ai_enabled = True
     except Exception as e:
-        st.warning(f"Gemini API 연결 대기 중... (원인: {e})")
+        st.warning(f"Gemini API 연결 중 오류 발생: {e}")
 
-# 4. 세션 데이터 안전 초기화
-if 'reports' not in st.session_state:
+# 4. 세션 데이터 설정
+if "reports" not in st.session_state:
     st.session_state.reports = [
         {"lat": 37.5665, "lon": 126.9780, "type": "🚫 엘리베이터 고장", "desc": "시청역 1번 출구 엘리베이터 점검 중"},
         {"lat": 37.5700, "lon": 126.9820, "type": "🚧 공사 구간", "desc": "보도블록 공사로 인해 휠체어 통행 불가"}
@@ -124,7 +119,7 @@ FACILITIES = [
     {"name": "서울시청 지하 휠체어 리프트", "lat": 37.5668, "lon": 126.9788, "cat": "🛗 리프트"}
 ]
 
-# 5. 상단 헤더
+# 5. 상단 타이틀
 st.markdown("""
     <div class="header-box">
         <h1>♿ 장애인을 위한 길안내 서비스</h1>
@@ -135,9 +130,7 @@ st.markdown("""
 # 6. 메인 탭
 tab1, tab2, tab3 = st.tabs(["🗺️ 무장애 길찾기", "📍 시설 정보 & 위험 제보", "🤖 AI 이동 도우미"])
 
-# ---------------------------------------------------------
 # TAB 1: 무장애 길찾기
-# ---------------------------------------------------------
 with tab1:
     col_input, col_result = st.columns([1, 2], gap="medium")
     
@@ -179,5 +172,6 @@ with tab1:
             
             st.markdown("""
             **📌 단계별 상세 이동 가이드**
-            1. **[출발]** 서울역 1번
-            
+            1. **[출발]** 서울역 1번 출구 엘리베이터를 통해 지상 보도로 이동합니다.
+            2. **[평지]** 300m 직선 보도 이동 (보도폭 2.5m 이상, 턱 없음).
+            3. **[횡단보도]** 음향 신호기가
